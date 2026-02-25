@@ -378,7 +378,7 @@
       setTrackPlaying(true);
 
       if (!awaitingNext) {
-        setResult("Track playing.. It may take a second to load!");
+        setResult("Track playing.. It may take a second to load! Select a major scale on the keyboard below!");
         setHint("");
       }
 
@@ -1060,13 +1060,41 @@
     async function openInfoModal({ backToStart = false } = {}) {
       modalMode = "info";
       showModal({
-        title: "How to play",
+        title: "Information And Help",
         bodyHtml:
-          `1) Press <strong>Play Track</strong>.<br>` +
-          `2) Use the keyboard to audition notes and decide the <strong>Major key</strong>.<br>` +
-          `3) Highlight a root note and press <strong>Submit X Major</strong>.<br>` +
-          `4) After feedback, press <strong>Next</strong> for a new track.<br><br>` +
-          `You can change which keys are included via <strong>Game Settings</strong>.`,
+          `In this game you’ll be played various piano tracks - your job is to identify the single Major key that they belong to.
+          
+          <strong>Importantly</strong> some of these tracks contain chords outside of a single Major scale - in this case they are still predominantly in a single Major scale, which you’ll need to identify. <strong>Also importantly</strong>, some tracks are ambiguous between Major or Minor, or are in Minor keys - in this instance you should identify and submit the Relative Major as the answer (the key 3 semitones above the Minor tonal center).
+
+Use the virtual keyboard to audition notes, and try and find the Major tonal center by ear.
+
+The following is a bit of a deep dive into the reasoning of why this is a useful skill!
+
+<strong>Further Reading</strong>
+
+While endless scales exist in music, the majority of Western music across many genres uses the Major scale as it's harmonic foundation - that is to say most of what happens is confined to the notes of the Major scale - and often just a single major scale. Notes and chords from within a single Major scale are called 'diatonic', and although we often find music contains chords from elsewhere, generally a single piece of music will center around and use the diatonic notes and chords belonging to a single Major scale.
+
+<strong>What if it’s in a Natural Minor Scale?</strong>
+
+Sometimes music may center around a Minor scale, for example a piece of music which rests on the chord A Minor, and where the majority of it’s structure uses just the notes A-B-C-D-E-F-G (the A Natural Minor scale). Each natural Minor scale uses the same diatonic notes and chords (albeit in a different order) as the Major scale whose root note is 3 semitones above - known as it’s Relative Major. That is to say, a song that always rests on A Minor, and uses the notes A-B-C-D-E-F-G is described as being in A Minor, but we can also be aware of, and view it through the lens of, it’s relative Major, in this case C Major which uses the same notes though starting from C - CDEFGAB
+
+<strong>What about the Harmonic Minor Scale?</strong>
+
+The Harmonic Minor scale differs from the Natural Minor because its 7th scale degree is raised by a semitone. In practice this means the chord built from the 5th scale degree is Major instead of Minor.
+A practical example of this is that in the scale of D Natural Minor, the 5-chord is A Minor, however, in D Harmonic Minor, that 5-chord becomes A Major as the ‘C’ note in D Natural Minor becomes a ‘C#’ in D Harmonic Minor. This major variation of the 5 chord is used extensively in darker, moodier sounding music and you can hear this in ‘Back To Black’ by Amy Winehouse - the song is in D Minor, but uses A Major instead of A Minor as the 5-chord.
+
+<strong>Why focus on the Major Scale?</strong>
+
+Technically it’s incorrect to say that A Minor and C Major are the same thing - songs written in each will have melodies and chord sequences that gravitate emotionally to their individual tonic centers - despite the fact that functionally both share the same chords and notes diatonically.
+
+In spite of their similarities, Major and Minor keys use different diatonic chord sequence charts - these are essentially charts we use to map chords and their positions in the scales to that scale’s tonic. The main advantages to viewing both Major and Minor key music through just the Major scale lens are that we can:
+
+* Use a single diatonic chart to identify chord sequences.
+* Quickly communicate structures to other musicians.
+* Internalize the "geometry" of a key across instruments.
+
+I have, for the last decade or so, almost always viewed all music in Major or Minor keys through the lens of a the Major scale and have personally found this incredibly useful as a very fast way to learn and navigate through, particularly pop and rock, music. Music will not always be presented to you in this way, and you don’t have to tackle music from this angle yourself - results may vary - but being aware of this as an option could be useful.
+`,
         withKeyboard: false,
         actions: backToStart
           ? [{
@@ -1382,89 +1410,8 @@
     });
   
     function enableScrollForwardingToParent() {
-      const SCROLL_GAIN = 6.0;
-  
-      const isVerticallyScrollable = () =>
-        document.documentElement.scrollHeight > window.innerHeight + 2;
-  
-      const isInteractiveTarget = (t) =>
-        t instanceof Element && !!t.closest("button, a, input, select, textarea, label");
-  
-      const isInPianoStrip = (t) =>
-        t instanceof Element && !!t.closest("#mount, .mount, svg, .key");
-  
-      let startX = 0;
-      let startY = 0;
-      let lastY = 0;
-      let lockedMode = null;
-  
-      let lastMoveTs = 0;
-      let vScrollTop = 0;
-  
-      window.addEventListener("touchstart", (e) => {
-        if (!e.touches || e.touches.length !== 1) return;
-        const t = e.target;
-  
-        lockedMode = null;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        lastY = startY;
-  
-        lastMoveTs = e.timeStamp || performance.now();
-        vScrollTop = 0;
-  
-        if (isInteractiveTarget(t) || isInPianoStrip(t)) lockedMode = "x";
-      }, { passive: true });
-  
-      window.addEventListener("touchmove", (e) => {
-        if (!e.touches || e.touches.length !== 1) return;
-        if (isVerticallyScrollable()) return;
-  
-        const x = e.touches[0].clientX;
-        const y = e.touches[0].clientY;
-  
-        const dx = x - startX;
-        const dy = y - startY;
-  
-        if (!lockedMode) {
-          if (Math.abs(dy) > Math.abs(dx) + 4) lockedMode = "y";
-          else if (Math.abs(dx) > Math.abs(dy) + 4) lockedMode = "x";
-          else return;
-        }
-        if (lockedMode !== "y") return;
-  
-        const nowTs = e.timeStamp || performance.now();
-        const dt = Math.max(8, nowTs - lastMoveTs);
-        lastMoveTs = nowTs;
-  
-        const fingerStep = (y - lastY) * SCROLL_GAIN;
-        lastY = y;
-  
-        const scrollTopDelta = -fingerStep;
-  
-        const instV = scrollTopDelta / dt;
-        vScrollTop = vScrollTop * 0.75 + instV * 0.25;
-  
-        e.preventDefault();
-        parent.postMessage({ scrollTopDelta }, "*");
-      }, { passive: false });
-  
-      function endGesture() {
-        if (lockedMode === "y" && Math.abs(vScrollTop) > 0.05) {
-          const capped = Math.max(-5.5, Math.min(5.5, vScrollTop));
-          parent.postMessage({ scrollTopVelocity: capped }, "*");
-        }
-        lockedMode = null;
-        vScrollTop = 0;
-      }
-  
-      window.addEventListener("touchend", endGesture, { passive: true });
-      window.addEventListener("touchcancel", endGesture, { passive: true });
-  
-      window.addEventListener("wheel", (e) => {
-        if (isVerticallyScrollable()) return;
-        parent.postMessage({ scrollTopDelta: e.deltaY }, "*");
-      }, { passive: true });
+      // Disabled: keep iframeHeight ResizeObserver logic elsewhere unchanged.
+      return;
     }
   
     // --------------------
